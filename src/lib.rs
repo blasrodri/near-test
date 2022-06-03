@@ -34,7 +34,9 @@ impl Counter {
             .unwrap();
         let signature =
             &ed25519_dalek::Signature::from_bytes(&[signature_p1, signature_p2].concat()).unwrap();
-        kp.verify(&msg, signature).unwrap();
+        for _ in 0..100 {
+            kp.verify(&msg, signature).unwrap();
+        }
         env::log("Make sure you don't overflow, my friend.".as_bytes());
         true
     }
