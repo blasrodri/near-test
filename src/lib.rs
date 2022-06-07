@@ -56,7 +56,7 @@ impl SignatureVerifier {
         ])
         .unwrap();
         let signature =
-            schnorrkel::Signature::from_bytes([signature_p1, signature_p2].concat().as_ref())
+            schnorrkel::sign::Signature::from_bytes([signature_p1, signature_p2].concat().as_ref())
                 .unwrap();
         public_key
             .verify_simple(SIGNING_CTX, &msg, &signature)
