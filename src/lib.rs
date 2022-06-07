@@ -17,11 +17,19 @@ near_sdk::setup_alloc!();
 // More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
 #[near_bindgen]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
-pub struct Counter {}
+pub struct SignatureVerifier {}
+
+// something needed by snhorrkel
+const SIGNING_CTX: &[u8] = b"substrate";
 
 #[near_bindgen]
-impl Counter {
-    pub fn verify(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) -> bool {
+impl SignatureVerifier {
+    pub fn verify_ed25519(
+        &self,
+        signature_p1: [u8; 32],
+        signature_p2: [u8; 32],
+        msg: [u8; 32],
+    ) -> bool {
         let private_key: &[u8] = &[
             1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103,
             137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239,
@@ -39,6 +47,20 @@ impl Counter {
         }
         env::log("Make sure you don't overflow, my friend.".as_bytes());
         true
+    }
+
+    pub fn verify_schnorrkel(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) {
+        let public_key = schnorrkel::PublicKey::from_bytes(&[
+            190, 72, 112, 6, 182, 204, 56, 92, 5, 158, 148, 55, 136, 35, 90, 216, 30, 35, 86, 208,
+            210, 66, 158, 72, 67, 25, 35, 217, 88, 145, 65, 113,
+        ])
+        .unwrap();
+        let signature =
+            schnorrkel::Signature::from_bytes([signature_p1, signature_p2].concat().as_ref())
+                .unwrap();
+        public_key
+            .verify_simple(SIGNING_CTX, &msg, &signature)
+            .unwrap();
     }
 }
 
@@ -84,11 +106,11 @@ mod tests {
 
     // mark individual unit tests with #[test] for them to be registered and fired
     #[test]
-    fn increment() {
+    fn verify_ed25519() {
         // set up the mock context into the testing environment
         let context = get_context(vec![], false);
         testing_env!(context);
-        let contract = Counter {};
+        let contract = SignatureVerifier {};
 
         // TO GENERATE DATA: https://paulmillr.com/noble/
 
@@ -106,10 +128,30 @@ mod tests {
         ];
 
         // let signature = ed25519_dalek::Signature::from_bytes(signature).unwrap();
-        contract.verify(
+        contract.verify_ed25519(
             signature[..32].try_into().unwrap(),
             signature[32..].try_into().unwrap(),
             message,
         );
+    }
+
+    #[test]
+    fn verify_schnorrkel() {
+        let context = get_context(vec![], false);
+        testing_env!(context);
+        let contract = SignatureVerifier {};
+        let message = [
+            107, 97, 106, 100, 108, 102, 107, 106, 97, 108, 107, 102, 106, 97, 107, 108, 102, 106,
+            100, 107, 108, 97, 100, 106, 102, 107, 108, 106, 97, 100, 115, 107,
+        ];
+        let signature = [
+            106, 144, 17, 34, 142, 65, 191, 241, 233, 250, 132, 168, 204, 173, 122, 196, 118, 248,
+            159, 159, 254, 37, 153, 84, 248, 104, 206, 217, 168, 65, 12, 74, 183, 134, 143, 30,
+            123, 61, 112, 153, 244, 109, 199, 195, 164, 0, 7, 55, 26, 199, 164, 219, 147, 217, 157,
+            239, 198, 108, 162, 246, 52, 49, 116, 132,
+        ];
+        let signature_p1 = signature[..32].try_into().unwrap();
+        let signature_p2 = signature[32..].try_into().unwrap();
+        contract.verify_schnorrkel(signature_p1, signature_p2, message);
     }
 }
