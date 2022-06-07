@@ -21,7 +21,6 @@ pub struct SignatureVerifier {}
 
 // something needed by snhorrkel
 const SIGNING_CTX: &[u8] = b"substrate";
-const NUM_ITERATIONS: u8 = 10;
 
 #[near_bindgen]
 impl SignatureVerifier {
@@ -30,6 +29,7 @@ impl SignatureVerifier {
         signature_p1: [u8; 32],
         signature_p2: [u8; 32],
         msg: [u8; 32],
+        iterations: usize,
     ) -> bool {
         let private_key: &[u8] = &[
             1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103,
@@ -43,14 +43,20 @@ impl SignatureVerifier {
             .unwrap();
         let signature =
             &ed25519_dalek::Signature::from_bytes(&[signature_p1, signature_p2].concat()).unwrap();
-        for _ in 0..NUM_ITERATIONS {
+        for _ in 0..iterations {
             kp.verify(&msg, signature).unwrap();
         }
         env::log("Make sure you don't overflow, my friend.".as_bytes());
         true
     }
 
-    pub fn verify_schnorrkel(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) {
+    pub fn verify_schnorrkel(
+        &self,
+        signature_p1: [u8; 32],
+        signature_p2: [u8; 32],
+        msg: [u8; 32],
+        iterations: usize,
+    ) {
         let public_key = schnorrkel::PublicKey::from_bytes(&[
             190, 72, 112, 6, 182, 204, 56, 92, 5, 158, 148, 55, 136, 35, 90, 216, 30, 35, 86, 208,
             210, 66, 158, 72, 67, 25, 35, 217, 88, 145, 65, 113,
@@ -59,14 +65,20 @@ impl SignatureVerifier {
         let signature =
             schnorrkel::sign::Signature::from_bytes([signature_p1, signature_p2].concat().as_ref())
                 .unwrap();
-        for _ in 0..NUM_ITERATIONS {
+        for _ in 0..iterations {
             public_key
                 .verify_simple(SIGNING_CTX, &msg, &signature)
                 .unwrap();
         }
     }
 
-    pub fn verify_ecdsa(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) {
+    pub fn verify_ecdsa(
+        &self,
+        signature_p1: [u8; 32],
+        signature_p2: [u8; 32],
+        msg: [u8; 32],
+        iterations: usize,
+    ) {
         let public_key = [
             2, 29, 21, 35, 7, 198, 183, 43, 14, 208, 65, 139, 14, 112, 205, 128, 231, 245, 41, 91,
             141, 134, 245, 114, 45, 63, 82, 19, 251, 210, 57, 79, 54,
@@ -78,7 +90,7 @@ impl SignatureVerifier {
         .unwrap();
 
         let message = secp256k1::Message::from_slice(&msg).unwrap();
-        for _ in 0..NUM_ITERATIONS {
+        for _ in 0..iterations {
             signature.verify(&message, &pk).unwrap();
         }
     }
@@ -152,6 +164,7 @@ mod tests {
             signature[..32].try_into().unwrap(),
             signature[32..].try_into().unwrap(),
             message,
+            10,
         );
     }
 
@@ -172,7 +185,7 @@ mod tests {
         ];
         let signature_p1 = signature[..32].try_into().unwrap();
         let signature_p2 = signature[32..].try_into().unwrap();
-        contract.verify_schnorrkel(signature_p1, signature_p2, message);
+        contract.verify_schnorrkel(signature_p1, signature_p2, message, 10);
     }
 
     #[test]
@@ -195,6 +208,6 @@ mod tests {
         let signature_p1 = compact_signature[..32].try_into().unwrap();
         let signature_p2 = compact_signature[32..].try_into().unwrap();
 
-        contract.verify_ecdsa(signature_p1, signature_p2, msg);
+        contract.verify_ecdsa(signature_p1, signature_p2, msg, 10);
     }
 }
