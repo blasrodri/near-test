@@ -21,6 +21,7 @@ pub struct SignatureVerifier {}
 
 // something needed by snhorrkel
 const SIGNING_CTX: &[u8] = b"substrate";
+const NUM_ITERATIONS: u8 = 10;
 
 #[near_bindgen]
 impl SignatureVerifier {
@@ -42,7 +43,7 @@ impl SignatureVerifier {
             .unwrap();
         let signature =
             &ed25519_dalek::Signature::from_bytes(&[signature_p1, signature_p2].concat()).unwrap();
-        for _ in 0..100 {
+        for _ in 0..NUM_ITERATIONS {
             kp.verify(&msg, signature).unwrap();
         }
         env::log("Make sure you don't overflow, my friend.".as_bytes());
@@ -58,9 +59,11 @@ impl SignatureVerifier {
         let signature =
             schnorrkel::sign::Signature::from_bytes([signature_p1, signature_p2].concat().as_ref())
                 .unwrap();
-        public_key
-            .verify_simple(SIGNING_CTX, &msg, &signature)
-            .unwrap();
+        for _ in 0..NUM_ITERATIONS {
+            public_key
+                .verify_simple(SIGNING_CTX, &msg, &signature)
+                .unwrap();
+        }
     }
 
     pub fn verify_ecdsa(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) {
@@ -75,7 +78,9 @@ impl SignatureVerifier {
         .unwrap();
 
         let message = secp256k1::Message::from_slice(&msg).unwrap();
-        signature.verify(&message, &pk).unwrap();
+        for _ in 0..NUM_ITERATIONS {
+            signature.verify(&message, &pk).unwrap();
+        }
     }
 }
 
