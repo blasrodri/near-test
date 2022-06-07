@@ -14,7 +14,7 @@ schnorrkel = { version = "0.9.1", features = [
 	"preaudit_deprecated",
 	"u64_backend",
 ], default-features = false }
-# secp256k1 = { version = "0.22.1" , detault_features = false }
+secp256k1 = { version = "0.22.1" , detault_features = false, features = ["global-context"] }
 
 [profile.release]
 codegen-units = 1

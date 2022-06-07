@@ -62,6 +62,21 @@ impl SignatureVerifier {
             .verify_simple(SIGNING_CTX, &msg, &signature)
             .unwrap();
     }
+
+    pub fn verify_ecdsa(&self, signature_p1: [u8; 32], signature_p2: [u8; 32], msg: [u8; 32]) {
+        let public_key = [
+            2, 29, 21, 35, 7, 198, 183, 43, 14, 208, 65, 139, 14, 112, 205, 128, 231, 245, 41, 91,
+            141, 134, 245, 114, 45, 63, 82, 19, 251, 210, 57, 79, 54,
+        ];
+        let pk = secp256k1::PublicKey::from_slice(&public_key).unwrap();
+        let signature = secp256k1::ecdsa::Signature::from_compact(
+            [signature_p1, signature_p2].concat().as_ref(),
+        )
+        .unwrap();
+
+        let message = secp256k1::Message::from_slice(&msg).unwrap();
+        signature.verify(&message, &pk).unwrap();
+    }
 }
 
 /*
@@ -153,5 +168,28 @@ mod tests {
         let signature_p1 = signature[..32].try_into().unwrap();
         let signature_p2 = signature[32..].try_into().unwrap();
         contract.verify_schnorrkel(signature_p1, signature_p2, message);
+    }
+
+    #[test]
+    fn verify_ecdsa() {
+        let context = get_context(vec![], false);
+        testing_env!(context);
+        let contract = SignatureVerifier {};
+
+        let msg = [
+            107, 97, 106, 100, 108, 102, 107, 106, 97, 108, 107, 102, 106, 97, 107, 108, 102, 106,
+            100, 107, 108, 97, 100, 106, 102, 107, 108, 106, 97, 100, 115, 107,
+        ];
+
+        let compact_signature = [
+            231, 117, 17, 89, 49, 142, 111, 201, 161, 107, 167, 147, 215, 167, 196, 226, 200, 176,
+            184, 62, 196, 240, 210, 137, 77, 198, 90, 97, 201, 212, 96, 229, 1, 31, 7, 121, 178,
+            247, 150, 131, 108, 250, 173, 71, 100, 192, 83, 64, 145, 85, 254, 69, 176, 7, 114, 89,
+            64, 205, 30, 243, 193, 78, 142, 27,
+        ];
+        let signature_p1 = compact_signature[..32].try_into().unwrap();
+        let signature_p2 = compact_signature[32..].try_into().unwrap();
+
+        contract.verify_ecdsa(signature_p1, signature_p2, msg);
     }
 }
