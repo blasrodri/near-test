@@ -22,6 +22,28 @@ pub struct SignatureVerifier {}
 // something needed by snhorrkel
 const SIGNING_CTX: &[u8] = b"substrate";
 
+pub fn verify_ed25519_with_iterations(
+    signature_p1: [u8; 32],
+    signature_p2: [u8; 32],
+    msg: [u8; 32],
+    iterations: usize,
+) {
+    let private_key: &[u8] = &[
+        1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103,
+        137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239,
+    ];
+    let public_key: &[u8] = &[
+        32, 122, 6, 120, 146, 130, 30, 37, 215, 112, 241, 251, 160, 196, 124, 17, 255, 75, 129, 62,
+        84, 22, 46, 206, 158, 184, 57, 224, 118, 35, 26, 182,
+    ];
+    let kp =
+        ed25519_dalek::Keypair::from_bytes([private_key, public_key].concat().as_ref()).unwrap();
+    let signature =
+        &ed25519_dalek::Signature::from_bytes(&[signature_p1, signature_p2].concat()).unwrap();
+    for _ in 0..iterations {
+        kp.verify(&msg, signature).unwrap();
+    }
+}
 #[near_bindgen]
 impl SignatureVerifier {
     pub fn verify_ed25519(
@@ -31,21 +53,7 @@ impl SignatureVerifier {
         msg: [u8; 32],
         iterations: usize,
     ) -> bool {
-        let private_key: &[u8] = &[
-            1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239, 1, 35, 69, 103,
-            137, 171, 205, 239, 1, 35, 69, 103, 137, 171, 205, 239,
-        ];
-        let public_key: &[u8] = &[
-            32, 122, 6, 120, 146, 130, 30, 37, 215, 112, 241, 251, 160, 196, 124, 17, 255, 75, 129,
-            62, 84, 22, 46, 206, 158, 184, 57, 224, 118, 35, 26, 182,
-        ];
-        let kp = ed25519_dalek::Keypair::from_bytes([private_key, public_key].concat().as_ref())
-            .unwrap();
-        let signature =
-            &ed25519_dalek::Signature::from_bytes(&[signature_p1, signature_p2].concat()).unwrap();
-        for _ in 0..iterations {
-            kp.verify(&msg, signature).unwrap();
-        }
+        verify_ed25519_with_iterations(signature_p1, signature_p2, msg, iterations);
         env::log("Make sure you don't overflow, my friend.".as_bytes());
         true
     }
