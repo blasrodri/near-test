@@ -22,7 +22,7 @@ pub struct SignatureVerifier {}
 // something needed by snhorrkel
 const SIGNING_CTX: &[u8] = b"substrate";
 
-pub fn verify_ed25519(
+pub fn verify_ed25519_with_iterations(
     signature_p1: [u8; 32],
     signature_p2: [u8; 32],
     msg: [u8; 32],
@@ -53,7 +53,7 @@ impl SignatureVerifier {
         msg: [u8; 32],
         iterations: usize,
     ) -> bool {
-        verify_ed25519(signature_p1, signature_p2, msg, iterations);
+        verify_ed25519_with_iterations(signature_p1, signature_p2, msg, iterations);
         env::log("Make sure you don't overflow, my friend.".as_bytes());
         true
     }
